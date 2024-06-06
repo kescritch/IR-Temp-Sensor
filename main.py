@@ -1,4 +1,4 @@
-from irTempSensor.uiRunner import Ui_MainWindow
+from uiRunner import Ui_MainWindow
 from PyQt6 import QtWidgets
 
 if __name__ == "__main__":

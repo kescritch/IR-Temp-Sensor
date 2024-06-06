@@ -1,12 +1,20 @@
 import time
 from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtCore import pyqtSignal
-import irTempSensor.irRunner as ir
+import irRunner as ir
 import pyqtgraph as pg
 from pandas import DataFrame
 
 class Ui_MainWindow(object):
+    delay = .5 #Set delay
+    count = 0
+
     checker = False
+
+    x_vals = []
+    y_vals_obj = []
+    y_vals_amb = []
+
 
     def setupUi(self, MainWindow):
                 
@@ -65,38 +73,40 @@ class Ui_MainWindow(object):
         self.gridLayout_3.addItem(spacerItem1, 2, 0, 1, 1)
         self.gridLayout_4.addLayout(self.gridLayout_3, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
+
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 984, 21))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
+
         self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
         self.checkBox.setGeometry(QtCore.QRect(50, 50, 151, 17))
         self.checkBox.setObjectName("checkBox")
+
         self.textBrowser.setGeometry(QtCore.QRect(40, 80, 256, 31))
         self.textBrowser.setObjectName("textBrowser")
+
         self.retranslateUi(MainWindow)
+
 
         # setting up the plot
         self.plot_graph = pg.PlotWidget()
         self.plot_graph
         self.gridLayout_4.addWidget(self.plot_graph,1,0,1,1) #replaces widget with plotgraph 
 
-        self.time = []
-        self.temperature = []
-
         self.obj = self.plot_graph.plot(       #plotting obj temp
-            self.time,
-            self.temperature,
+            self.x_vals,
+            self.y_vals_amb,
             name = "Object Temprature",
             pen = pg.mkPen(color=(255, 0, 0))
         )
-        font1 = {'family':'serif','color':'blue','size':2000}
         
         self.amb = self.plot_graph.plot(        #plotting amb temp 
-            self.time,
-            self.temperature,
+            self.x_vals,
+            self.y_vals_amb,
             name = "Amb Temp",
             pen = pg.mkPen(color=(0, 255, 0))
         )
@@ -106,16 +116,7 @@ class Ui_MainWindow(object):
         # Saving at end of program. to use comment out call in plotter and uncomment statement below
         # MainWindow.destroyed.connect(lambda : self.saveData()) 
     
-    def saveData(self):
-        self.obj_Temp = Ui_MainWindow.y_vals_obj 
-        self.amb_Temp = Ui_MainWindow.y_vals_amb
-        self.time = Ui_MainWindow.x_vals
-
-        df = DataFrame({"Time (s)" : self.time, "Obj Temp (c)" : self.obj_Temp, "Amb Temp (c)" : self.amb_Temp}) #Adds data to dataframe
-
-        df.to_excel('test.xlsx') #converts to excel file
-
-    def retranslateUi(self, MainWindow):
+    def retranslateUi(self, MainWindow): #part of Qt Designer 
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.groupBox.setTitle(_translate("MainWindow", "Parameters"))
@@ -124,57 +125,45 @@ class Ui_MainWindow(object):
         self.label_2.setText(_translate("MainWindow", "Object Temperature:"))
         self.label_3.setText(_translate("MainWindow", "Ambient Temperature:"))
         self.label.setText(_translate("MainWindow", "<html><head/><body><p align=\"center\"><span style=\" font-size:14pt; font-weight:600;\">Object and ambient Temprature Graph</span></p></body></html>"))
-    
+
     def startWorker(self): #Worker thread 
         Ui_MainWindow.checker = self.checkBox.isChecked()
+
         self.thread = ThreadClass(parent = None)    
         self.thread.start() 
-        self.thread.dataSignal.connect(self.myfunction) 
+        self.thread.dataSignal.connect(self.guiUpdate) #connecting guiUpdate to Thread
 
+    def plotter(self,objTemp,ambTemp): #plotting the data 
+        self.count += self.delay
+        self.x_vals.append(self.count)
+        self.y_vals_obj.append(objTemp)
+        self.y_vals_amb.append(ambTemp)
 
-    def myfunction(self, objTemp, ambTemp):
-        self.textBrowser.setText(objTemp)
-        self.textBrowser_2.setText(ambTemp)
-        self.plotter(objTemp,ambTemp)
-        
-    x_vals = []
-    y_vals_obj = []
-    y_vals_amb = []
-    count = 0
-
-    def plotter(self,objTemp,ambTemp):
-        objTemp = float(objTemp)
-        ambTemp = float(ambTemp)
-
-        # removing glitches 
+        # removing glitches. When running the sensor too fast there will be errors. Sets these errors to previous value
 
         # if objTemp >= 300:
         #     objTemp = Ui_MainWindow.y_vals_obj[len(Ui_MainWindow.y_vals_obj)-1]
         # if ambTemp >= 300:
         #     ambTemp = Ui_MainWindow.y_vals_amb[len(Ui_MainWindow.y_vals_amb)-1]
 
-        Ui_MainWindow.count+=1
-        Ui_MainWindow.x_vals.append(Ui_MainWindow.count)
-        Ui_MainWindow.y_vals_obj.append(objTemp)
-        Ui_MainWindow.y_vals_amb.append(ambTemp)
+        self.obj.setData(self.x_vals, self.y_vals_obj)
+        self.amb.setData(self.x_vals, self.y_vals_amb)
 
-        # scrolling graph
+        self.saveData() #comment
+        
+    def guiUpdate(self, objTemp, ambTemp): #Updating GUI
+        self.textBrowser.setText(str(objTemp))
+        self.textBrowser_2.setText(str(ambTemp))
+        self.plotter(objTemp,ambTemp)
 
-        # if len(Ui_MainWindow.y_vals_amb) > 30:
-        #     Ui_MainWindow.y_vals_obj.pop(0)   
-        #     Ui_MainWindow.y_vals_amb.pop(0)
-        #     Ui_MainWindow.x_vals.pop(0)
-
-        self.obj.setData(Ui_MainWindow.x_vals, Ui_MainWindow.y_vals_obj)
-        self.amb.setData(Ui_MainWindow.x_vals, Ui_MainWindow.y_vals_amb)
-
-        self.saveData()
-
-
+    def saveData(self): #Putting data into .xlsx file 
+        df = DataFrame({"Time (s)" : self.x_vals, "Obj Temp (c)" : self.y_vals_obj, "Amb Temp (c)" : self.y_vals_amb})
+        df.to_excel('data.xlsx')
        
-class ThreadClass(QtCore.QThread):
+class ThreadClass(QtCore.QThread): #Thread
 
-    dataSignal = pyqtSignal(str,str)
+    dataSignal = pyqtSignal(float,float)    #creating the signal
+    delay = Ui_MainWindow.delay
 
     def __init__(self,parent = None):
         super(ThreadClass, self).__init__(parent)
@@ -182,6 +171,6 @@ class ThreadClass(QtCore.QThread):
 
     def run(self):
         while(Ui_MainWindow.checker == True):
-            tup = ir.printer()
-            self.dataSignal.emit(tup[0],tup[1])
-            time.sleep(0.5)
+            tup = ir.printer()  #gets data from the printer 
+            self.dataSignal.emit(tup[0],tup[1]) #emits the signal 
+            time.sleep(self.delay)
