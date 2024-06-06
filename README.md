@@ -14,7 +14,7 @@ This program uses the MLX90614 infrared temperature sensor and Adafruit FT232H t
 2. Create virtual environment
 3. Download requirements using `pip install -r requirements.txt`
 
-## Code Structure
+## Code Structure:
 - main.py: Main script for initialization.
 - irRunner.py: Handles I2C communication with the MLX90614 sensor.
 - uiRunner.py: Manages the GUI, data collection, and Excel logging. 
