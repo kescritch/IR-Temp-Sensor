@@ -9,7 +9,7 @@ This program uses the MLX90614 infrared temperature sensor and Adafruit FT232H t
 - Real-Time Graphing: Displays data on a GUI.
 - Data Logging: Saves data to an Excel file.
 
-## Installation:
+## Instructions:
 1. Set up hardware: Connect MLX90614 to FT232H via I2C (SCL and SDA), then connect FT232H to the computer.
 2. Create virtual environment
 3. Download requirements using `pip install -r requirements.txt`
